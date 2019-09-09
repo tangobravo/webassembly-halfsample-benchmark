@@ -163,8 +163,49 @@ void run_benchmark()
 	printf("======\n");
 }
 
+void run_basic_checks()
+{
+	printf("Basic correctness checks:\n");
+	int in_w = 1280;
+	int in_h = 720;
+
+	size_t in_byte_count = in_w * in_h;
+	size_t out_byte_count = (in_w / 2) * (in_h / 2);
+
+	uint8_t* in_data = (uint8_t*)malloc(in_byte_count);
+	uint8_t* out_data = (uint8_t*)malloc(out_byte_count);
+	uint8_t* out_data_check = (uint8_t*)malloc(out_byte_count);
+
+	if(in_data == 0 || out_data == 0 || out_data_check == 0) {
+		free(in_data);
+		free(out_data);
+		free(out_data_check);
+		return;
+	}
+
+	// Fill in the random bytes
+	for(size_t i = 0; i < in_byte_count; ++i) {
+		in_data[i] = (uint8_t)(rand() & 0xff);
+	}
+
+	// Fill in the reference data from the plain implementation
+	half_sample_plain(in_data, in_w, in_h, out_data_check);
+	for(int f = 0; f < NUM_FUNCTIONS; ++f)
+	{
+		func_t* func = function_pointers[f];
+		(*func)(in_data, in_w, in_h, out_data);
+		int result = memcmp(out_data, out_data_check, out_byte_count);
+		printf("%s: %s\n", function_names[f], result == 0 ? "PASS" : "FAIL");
+	}
+
+	free(in_data);
+	free(out_data);
+	free(out_data_check);
+}
+
 int main()
 {
+	run_basic_checks();
 #ifdef __EMSCRIPTEN__
 	printf("Running benchmark every 5 seconds...\n");
 	EM_ASM(
