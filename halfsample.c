@@ -77,3 +77,51 @@ void half_sample_uint64_blocks(const uint8_t* in, int in_w, int in_h, uint8_t* o
 		bottom_ptr += x_blocks;
 	}
 }
+
+void half_sample_uint32_blocks(const uint8_t* in, int in_w, int in_h, uint8_t* out)
+{
+	const uint32_t* top_ptr = (uint32_t*)in;
+	const uint32_t* bottom_ptr = (uint32_t*)(in + in_w);
+	uint16_t* out_ptr = (uint16_t*)(out);
+
+	const uint32_t mask_00ff = 0x00FF00FF;
+	const uint32_t twos = 0x00020002;
+
+	int x_blocks = in_w / 4;
+	int out_h = in_h / 2;
+	for(int y = 0; y < out_h; ++y)
+	{
+		for(int x = 0; x < x_blocks; ++x)
+		{
+			uint32_t top_vals = *top_ptr;
+			uint32_t bottom_vals = *bottom_ptr;
+			top_ptr++;
+			bottom_ptr++;
+
+			// Split into separate vectors for odd and even byte indices
+			// to allow the pairwise additions (and to give 16-bits of
+			// room to accumulate the totals before dividing by 4)
+			uint32_t top_vals_even = top_vals & mask_00ff;
+			uint32_t top_vals_odd = (top_vals >> 8) & mask_00ff;
+			uint32_t bottom_vals_even = bottom_vals & mask_00ff;
+			uint32_t bottom_vals_odd = (bottom_vals >> 8) & mask_00ff;
+
+			// Add them all up, +2 for correct rounding
+			uint32_t totals = top_vals_even + top_vals_odd + bottom_vals_even + bottom_vals_odd + twos;
+
+			// Divide by 4 and re-assert the mask for the different elements
+			uint32_t average = (totals >> 2) & mask_00ff;
+
+			// Now a shift and OR, to pack the two results into the
+			// lower 16 bits
+			uint32_t shifted = (average >> 8) | average;
+			uint16_t out2 = (uint16_t)shifted;
+
+			*out_ptr = out2;
+			out_ptr++;
+		}
+
+		top_ptr += x_blocks;
+		bottom_ptr += x_blocks;
+	}
+}

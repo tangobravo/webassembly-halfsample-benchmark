@@ -33,10 +33,25 @@ void set_random_seed(unsigned int seed)
 	srand(seed);
 }
 
-const int NUM_FUNCTIONS = 2;
+
+typedef void (func_t)(const uint8_t*, int, int, uint8_t*);
+
+func_t* function_pointers[] = {
+	&half_sample_plain,
+	&half_sample_uint64_blocks,
+	&half_sample_uint32_blocks
+};
+
+const char* function_names[] = {
+	"half_sample_plain",
+	"half_sample_uint64_blocks",
+	"half_sample_uint32_blocks"
+};
+
+const int NUM_FUNCTIONS = sizeof(function_pointers) / sizeof(function_pointers[0]);
 
 EMSCRIPTEN_KEEPALIVE
-double benchmark(int func, size_t in_w, size_t in_h, size_t iterations,
+double benchmark(func_t* func, size_t in_w, size_t in_h, size_t iterations,
 	size_t iteration_stride, int* accumulator_result)
 {
 	size_t in_byte_count = in_w * in_h;
@@ -66,11 +81,7 @@ double benchmark(int func, size_t in_w, size_t in_h, size_t iterations,
 
 	for(int i = 0; i < iterations; ++i)
 	{
-		if(func == 0)
-			half_sample_plain(in_im, in_w, in_h, out_data);
-		else
-			half_sample_uint64_blocks(in_im, in_w, in_h, out_data);
-
+		(*func)(in_im, in_w, in_h, out_data);
 		in_im += iteration_stride;
 		accumulator += out_data[benchmark_accumulate_index];
 	}
@@ -124,7 +135,7 @@ void run_benchmark()
 			// Call the benchmark function
 			int accumulator = 0;
 			set_random_seed(i);
-			timings[func][i] = benchmark(func, test_w, test_h, 10, 16, &accumulator);
+			timings[func][i] = benchmark(function_pointers[func], test_w, test_h, 10, 16, &accumulator);
 			if(f == 0) {
 				first_accumulator_result = accumulator;
 			} else {
@@ -145,9 +156,7 @@ void run_benchmark()
 	printf("Benchmark timings (ms):\n");
 	for(int f = 0; f < NUM_FUNCTIONS; ++f)
 	{
-		if(f == 0) printf("half_sample_plain:\n");
-		if(f == 1) printf("half_sample_uint64_blocks:\n");
-
+		printf("%s:\n", function_names[f]);
 		for(int i = 0; i < 10; ++i)
 			printf(" %0.3f\n", timings[f][i]);
 	}
