@@ -148,24 +148,22 @@ void run_benchmark()
 	}
 
 	// Print out the results
-	printf("======\nBusy loop counts (32 bit | 64 bit function):\n");
+	printf("=== Busy loop counts ===\n");
+	printf("\"32 bit\",\"64 bit\"\n");
 	for(int i = 0; i < 10; ++i)
-		printf("%" PRIu32 " | %" PRIu64 "\n", busy_32_results[i], busy_64_results[i]);
-	printf("======\n");
+		printf("%" PRIu32 ",%" PRIu64 "\n", busy_32_results[i], busy_64_results[i]);
 
-	printf("Benchmark timings (ms):\n");
+	printf("=== Benchmark timings (ms) ===\n");
 	for(int f = 0; f < NUM_FUNCTIONS; ++f)
-	{
-		printf("%s:\n", function_names[f]);
-		for(int i = 0; i < 10; ++i)
-			printf(" %0.3f\n", timings[f][i]);
-	}
-	printf("======\n");
+		printf("\"%s\"%s", function_names[f], f + 1 < NUM_FUNCTIONS ? "," : "\n");
+	for(int i = 0; i < 10; ++i)
+		for(int f = 0; f < NUM_FUNCTIONS; ++f)
+			printf("%0.3f%s", timings[f][i], f + 1 < NUM_FUNCTIONS ? "," : "\n");
 }
 
 void run_basic_checks()
 {
-	printf("Basic correctness checks:\n");
+	printf("=== Basic checks ===\n");
 	int in_w = 1280;
 	int in_h = 720;
 
