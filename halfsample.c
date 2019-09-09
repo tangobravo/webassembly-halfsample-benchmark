@@ -125,3 +125,64 @@ void half_sample_uint32_blocks(const uint8_t* in, int in_w, int in_h, uint8_t* o
 		bottom_ptr += x_blocks;
 	}
 }
+
+void half_sample_uint32x2_blocks(const uint8_t* in, int in_w, int in_h, uint8_t* out)
+{
+	const uint32_t* top_ptr = (uint32_t*)in;
+	const uint32_t* bottom_ptr = (uint32_t*)(in + in_w);
+	uint32_t* out_ptr = (uint32_t*)(out);
+
+	const uint32_t mask_00ff = 0x00FF00FF;
+	const uint32_t twos = 0x00020002;
+
+	int x_blocks = in_w / 8;
+	int x_skip = in_w / 4;
+	int out_h = in_h / 2;
+	for(int y = 0; y < out_h; ++y)
+	{
+		for(int x = 0; x < x_blocks; ++x)
+		{
+			uint32_t top_vals_1 = *top_ptr;
+			uint32_t bottom_vals_1 = *bottom_ptr;
+			top_ptr++;
+			bottom_ptr++;
+
+			uint32_t top_vals_2 = *top_ptr;
+			uint32_t bottom_vals_2 = *bottom_ptr;
+			top_ptr++;
+			bottom_ptr++;
+
+			// Split into separate vectors for odd and even byte indices
+			// to allow the pairwise additions (and to give 16-bits of
+			// room to accumulate the totals before dividing by 4)
+			uint32_t top_vals_even_1 = top_vals_1 & mask_00ff;
+			uint32_t top_vals_odd_1 = (top_vals_1 >> 8) & mask_00ff;
+			uint32_t bottom_vals_even_1 = bottom_vals_1 & mask_00ff;
+			uint32_t bottom_vals_odd_1 = (bottom_vals_1 >> 8) & mask_00ff;
+
+			uint32_t top_vals_even_2 = top_vals_2 & mask_00ff;
+			uint32_t top_vals_odd_2 = (top_vals_2 >> 8) & mask_00ff;
+			uint32_t bottom_vals_even_2 = bottom_vals_2 & mask_00ff;
+			uint32_t bottom_vals_odd_2 = (bottom_vals_2 >> 8) & mask_00ff;
+
+			// Add them all up, +2 for correct rounding
+			uint32_t totals_1 = top_vals_even_1 + top_vals_odd_1 + bottom_vals_even_1 + bottom_vals_odd_1 + twos;
+			uint32_t totals_2 = top_vals_even_2 + top_vals_odd_2 + bottom_vals_even_2 + bottom_vals_odd_2 + twos;
+
+			// Divide by 4 and re-assert the mask for the different elements
+			uint32_t average_1 = (totals_1 >> 2) & mask_00ff;
+			uint32_t average_2 = (totals_2 >> 2) & mask_00ff;
+
+			// Now shifts and ORs to pack the 4 results back for saving
+			uint32_t shifted_1 = (average_1 >> 8) | average_1;
+			uint32_t shifted_2 = (average_2 >> 8) | average_2;
+			uint32_t out4 = (shifted_1 & 0x0000FFFF) | (shifted_2 << 16);
+
+			*out_ptr = out4;
+			out_ptr++;
+		}
+
+		top_ptr += x_skip;
+		bottom_ptr += x_skip;
+	}
+}

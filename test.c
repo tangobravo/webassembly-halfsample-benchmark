@@ -39,13 +39,15 @@ typedef void (func_t)(const uint8_t*, int, int, uint8_t*);
 func_t* function_pointers[] = {
 	&half_sample_plain,
 	&half_sample_uint64_blocks,
-	&half_sample_uint32_blocks
+	&half_sample_uint32_blocks,
+	&half_sample_uint32x2_blocks
 };
 
 const char* function_names[] = {
 	"half_sample_plain",
 	"half_sample_uint64_blocks",
-	"half_sample_uint32_blocks"
+	"half_sample_uint32_blocks",
+	"half_sample_uint32x2_blocks"
 };
 
 const int NUM_FUNCTIONS = sizeof(function_pointers) / sizeof(function_pointers[0]);
