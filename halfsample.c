@@ -1,5 +1,9 @@
 #include <stdint.h>
 
+#ifdef USE_WASM_SIMD
+#include <wasm_simd128.h>
+#endif
+
 // Assumptions: in image tightly packed (stride == in_w)
 // out image already allocated (in_w / 2) * (in_h / 2) bytes
 void half_sample_plain(const uint8_t* in, int in_w, int in_h, uint8_t* out)
@@ -186,3 +190,78 @@ void half_sample_uint32x2_blocks(const uint8_t* in, int in_w, int in_h, uint8_t*
 		bottom_ptr += x_skip;
 	}
 }
+
+#ifdef USE_WASM_SIMD
+
+void half_sample_wasm_simd(const uint8_t* in, int in_w, int in_h, uint8_t* out)
+{
+	const v128_t* top_ptr = (v128_t*)in;
+	const v128_t* bottom_ptr = (v128_t*)(in + in_w);
+	v128_t* out_ptr = (v128_t*)(out);
+
+	const v128_t mask_00ff = wasm_i16x8_splat(0x00FF);
+	const v128_t twos = wasm_i16x8_splat(0x0002);
+
+	int x_blocks = in_w / 32;
+	int x_skip = in_w / 16;
+	int out_h = in_h / 2;
+	for(int y = 0; y < out_h; ++y)
+	{
+		for(int x = 0; x < x_blocks; ++x)
+		{
+			v128_t top_vals_1 = *top_ptr;
+			v128_t bottom_vals_1 = *bottom_ptr;
+			top_ptr++;
+			bottom_ptr++;
+
+			v128_t top_vals_2 = *top_ptr;
+			v128_t bottom_vals_2 = *bottom_ptr;
+			top_ptr++;
+			bottom_ptr++;
+
+			// Split into separate vectors for odd and even byte indices
+			// to allow the pairwise additions (and to give 16-bits of
+			// room to accumulate the totals before dividing by 4)
+			v128_t top_vals_even_1 = top_vals_1 & mask_00ff;
+			v128_t top_vals_odd_1 = wasm_u16x8_shr(top_vals_1, 8);
+			v128_t bottom_vals_even_1 = bottom_vals_1 & mask_00ff;
+			v128_t bottom_vals_odd_1 = wasm_u16x8_shr(bottom_vals_1, 8);
+
+			v128_t top_vals_even_2 = top_vals_2 & mask_00ff;
+			v128_t top_vals_odd_2 = wasm_u16x8_shr(top_vals_2, 8);
+			v128_t bottom_vals_even_2 = bottom_vals_2 & mask_00ff;
+			v128_t bottom_vals_odd_2 = wasm_u16x8_shr(bottom_vals_2, 8);
+
+			// Add them all up, +2 for correct rounding
+			v128_t totals_top_1 =  wasm_i16x8_add(top_vals_even_1, top_vals_odd_1);
+			v128_t totals_bottom_1 =  wasm_i16x8_add(bottom_vals_even_1, bottom_vals_odd_1);
+			v128_t totals_top_2 =  wasm_i16x8_add(top_vals_even_2, top_vals_odd_2);
+			v128_t totals_bottom_2 =  wasm_i16x8_add(bottom_vals_even_2, bottom_vals_odd_2);
+			v128_t totals_1 = wasm_i16x8_add(twos, totals_top_1);
+			v128_t totals_2 = wasm_i16x8_add(twos, totals_top_2);
+			totals_1 = wasm_i16x8_add(totals_1, totals_bottom_1);
+			totals_2 = wasm_i16x8_add(totals_2, totals_bottom_2);
+
+			// Divide each u16 element by 4 with a shift right
+			v128_t average_1 = wasm_u16x8_shr(totals_1, 2);
+			v128_t average_2 = wasm_u16x8_shr(totals_2, 2);
+
+			// Narrow the results to a single output vector
+			// No intrinsic for yet the instruction we really want
+			// i8x16.narrow_i16x8_u(a: v128, b: v128) -> v128
+
+			// Shuffle should work but might be expensive on some
+			// architectures
+			v128_t out16 = wasm_v8x16_shuffle(average_1, average_2,
+				0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
+
+			*out_ptr = average_1;
+			out_ptr++;
+		}
+
+		top_ptr += x_skip;
+		bottom_ptr += x_skip;
+	}
+}
+
+#endif

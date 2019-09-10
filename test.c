@@ -41,6 +41,10 @@ func_t* function_pointers[] = {
 	&half_sample_uint64_blocks,
 	&half_sample_uint32_blocks,
 	&half_sample_uint32x2_blocks
+#ifdef USE_WASM_SIMD
+	,
+	&half_sample_wasm_simd
+#endif
 };
 
 const char* function_names[] = {
@@ -48,6 +52,10 @@ const char* function_names[] = {
 	"half_sample_uint64_blocks",
 	"half_sample_uint32_blocks",
 	"half_sample_uint32x2_blocks"
+#ifdef USE_WASM_SIMD
+	,
+	"half_sample_wasm_simd"
+#endif
 };
 
 const int NUM_FUNCTIONS = sizeof(function_pointers) / sizeof(function_pointers[0]);
