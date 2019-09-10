@@ -4,9 +4,10 @@ Half Sample Benchmark
 This repo benchmarks various half-sampling implementations for uint8_t data. The target is currently shipping WebAssembly runtimes in browsers that have support for uint64_t types but no explicit SIMD instructions yet.
 
 There are various implementations that handle multiple data elements packed into regular uint32_t or uint64_t elements. Some bit twiddling is required to stop the elements from interfering. Here are some handy references to the general ideas and some specific implementations:
-http://aggregate.org/SWAR/over.html (describes general ideas of SWAR - "SIMD Within a Register")
-http://aggregate.org/MAGIC (general twiddling algorithms)
-http://graphics.stanford.edu/~seander/bithacks.html (more bit twiddling stuff)
+
+- http://aggregate.org/SWAR/over.html (describes general ideas of SWAR - "SIMD Within a Register")
+- http://aggregate.org/MAGIC (general twiddling algorithms)
+- http://graphics.stanford.edu/~seander/bithacks.html (more bit twiddling stuff)
 
 To compile/test wasm implementation in d8 (with baseline "liftoff compiler" disabled):
 ```
