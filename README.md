@@ -28,15 +28,12 @@ $ clang -O3 -fno-vectorize -fno-slp-vectorize test.c halfsample.c -o test
 $ ./test
 ```
 
-I've also added an attempt at a WebAsembly SIMD implementation. It compiles successfully with the following command line:
+There is also an optional WebAssembly SIMD implementation. It compiles successfully with the following command line, using the `latest-upstream` emscripten:
 ```
 $ emcc -O3 -msimd128 -fno-vectorize -fno-slp-vectorize -DUSE_WASM_SIMD test.c halfsample.c -o test.js
 ```
 
-However this currently fails to run in d8 7.7 on my MacBook Pro:
+The SIMD shift instructions aren't supported by the v7.7 branch of d8, but do work with the latest master build (and in Chrome Canary).
 ```
 $ path/to/v8/out/x64.release/d8 --no-wasm-tier-up -no-liftoff --predictable --experimental-wasm-simd test.js
-failed to asynchronously prepare wasm: CompileError: WebAssembly.instantiate(): Compiling function #52 failed: invalid shift amount @+20117
-CompileError: WebAssembly.instantiate(): Compiling function #52 failed: invalid shift amount @+20117
-CompileError: WebAssembly.instantiate(): Compiling function #52 failed: invalid shift amount @+20117
 ```

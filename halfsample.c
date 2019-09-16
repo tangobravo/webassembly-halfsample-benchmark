@@ -255,7 +255,7 @@ void half_sample_wasm_simd(const uint8_t* in, int in_w, int in_h, uint8_t* out)
 			v128_t out16 = wasm_v8x16_shuffle(average_1, average_2,
 				0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
 
-			*out_ptr = average_1;
+			*out_ptr = out16;
 			out_ptr++;
 		}
 
