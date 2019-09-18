@@ -200,6 +200,7 @@ void run_basic_checks()
 	half_sample_plain(in_data, in_w, in_h, out_data_check);
 	for(int f = 0; f < NUM_FUNCTIONS; ++f)
 	{
+        memset(out_data, 0, out_byte_count);
 		func_t* func = function_pointers[f];
 		(*func)(in_data, in_w, in_h, out_data);
 		int result = memcmp(out_data, out_data_check, out_byte_count);
